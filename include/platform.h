@@ -7,6 +7,7 @@
 #else
 #include <sys/mman.h>
 #include <unistd.h>
+#include <linux/mman.h>
 #endif
 
 inline constexpr bool palloc_is_windows =
@@ -29,6 +30,11 @@ inline constexpr bool palloc_is_windows =
 namespace AL
 {
 
+constexpr size_t ONE_KB = 1024;
+constexpr size_t ONE_MB = 1024 * ONE_KB;
+constexpr size_t ONE_GB = 1024 * ONE_MB;
+constexpr size_t ONE_TB = 1024 * ONE_GB;
+
 //
 // replaces platform specific system calls with a wrapper that changes which function is called based on what system you compiled for.
 // has zero runtime overhead
@@ -45,14 +51,14 @@ struct platform_mem
 #endif
     }
 
+    // allocates virtual memory without using physical memory
+    // size is in bytes and must be a multiple of the system page size
     [[nodiscard]] static void* virtual_alloc(std::size_t size) noexcept
     {
-        // also need support for huge pages (2mb)
-        // how do you find page size? or do you define it yourself?
 #ifdef _WIN32
-        return VirtualAlloc(nullptr, size, MEM_RESERVE, PAGE_READWRITE);
+        return alloc(size);
 #else
-        void* ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        void* ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | /*MAP_HUGETLB | MAP_HUGE_2MB |*/ MAP_NORESERVE, -1, 0);
         return ptr == MAP_FAILED ? nullptr : ptr;
 #endif
     }

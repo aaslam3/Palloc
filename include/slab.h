@@ -172,8 +172,8 @@ struct thread_local_cache
 template<typename Tconfig>
 class slab
 {
+    static constexpr size_t VIRTUAL_MEM_ALLOC_SIZE = AL::ONE_GB * 100; 
 public:
-    // scale is multiplied by the default number of blocks to allocate
     slab();
     ~slab();
 
@@ -323,7 +323,7 @@ private:
     std::array<pool, Tconfig::NUM_SIZE_CLASSES> shared_pools;
 
     std::byte* m_region = nullptr;
-    size_t m_region_size = 0;
+    size_t m_region_size = 0; // total size of the contiguous region backing all pools in raw bytes
 
     inline static palloc_atomic<size_t> next_slab_id{0};
     size_t slab_id;
@@ -334,9 +334,10 @@ slab<Tconfig>::slab() : epoch(0), slab_id(next_slab_id.fetch_add(1, std::memory_
 {
     constexpr size_t raw_size = Tconfig::compute_total_region_size();
     size_t page_size = AL::platform_mem::page_size();
-    m_region_size = ((raw_size + page_size - 1) / page_size) * page_size;
+    // m_region_size = ((raw_size + page_size - 1) / page_size) * page_size;
+    m_region_size = VIRTUAL_MEM_ALLOC_SIZE; 
 
-    void* mem = AL::platform_mem::alloc(m_region_size);
+    void* mem = AL::platform_mem::virtual_alloc(m_region_size); // 100gb virtual memory alloc
     if (mem == nullptr)
         throw std::bad_alloc();
 

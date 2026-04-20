@@ -61,7 +61,7 @@ void pool::init(size_t block_size, size_t block_count)
     size_t region_needed = pool_view::required_region_size(block_size, block_count);
     m_region_size = ((region_needed + page_size - 1) / page_size) * page_size;
 
-    void* ptr = AL::platform_mem::alloc(m_region_size);
+    void* ptr = AL::platform_mem::virtual_alloc(m_region_size);
     if (ptr == nullptr)
         throw std::bad_alloc();
 
